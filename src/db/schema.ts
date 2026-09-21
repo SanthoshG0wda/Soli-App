@@ -28,6 +28,41 @@ export type DocumentStatusValue = (typeof DocumentStatus)[keyof typeof DocumentS
 
 export const messageRole = pgEnum("message_role", ["user", "assistant"]);
 
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    passwordHash: text("password_hash").notNull(),
+    role: text("role").notNull().default("user"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check("users_role_check", sql`${table.role} IN ('admin', 'user')`),
+  ],
+);
+
+export const sessions = pgTable(
+  "sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("sessions_user_id_idx").on(table.userId)],
+);
+
 export const documents = pgTable(
   "documents",
   {
@@ -80,16 +115,25 @@ export const chunks = pgTable(
   ],
 );
 
-export const chats = pgTable("chats", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  title: text("title").notNull().default("New chat"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const chats = pgTable(
+  "chats",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Nullable only to preserve chats created before auth existed; the app
+    // always sets an owner for new chats and filters reads by owner.
+    userId: uuid("user_id").references(() => users.id, {
+      onDelete: "cascade",
+    }),
+    title: text("title").notNull().default("New chat"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("chats_user_id_idx").on(table.userId)],
+);
 
 export const messages = pgTable(
   "messages",

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { documents } from "@/db/schema";
+import { getSessionUser } from "@/lib/auth";
 import { vectorStore } from "@/lib/vector";
 import { logger } from "@/lib/vector/logger";
 
@@ -10,6 +11,10 @@ export async function DELETE(
   ctx: RouteContext<"/api/documents/[id]">,
 ): Promise<NextResponse> {
   const { id } = await ctx.params;
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
 
   // Remove the document (chunks cascade) regardless of vector-store health.
   const [row] = await db

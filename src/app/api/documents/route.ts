@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { count, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { chunks, documents } from "@/db/schema";
+import { getSessionUser } from "@/lib/auth";
 import {
   IngestError,
   ingestPdfProduction as ingestPdf,
@@ -22,7 +23,11 @@ export interface DocumentListItem {
   updatedAt: string;
 }
 
-export async function GET(): Promise<NextResponse<{ documents: DocumentListItem[] }>> {
+export async function GET(): Promise<NextResponse> {
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
   const rows = await db.select().from(documents).orderBy(desc(documents.createdAt));
 
   const countRows = await db
@@ -50,6 +55,10 @@ export async function GET(): Promise<NextResponse<{ documents: DocumentListItem[
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
   let form: FormData;
   try {
     form = await request.formData();

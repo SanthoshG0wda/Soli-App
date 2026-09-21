@@ -15,6 +15,20 @@
       "when": 1789925547446,
       "tag": "0001_familiar_epoch",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789973040201,
+      "tag": "0002_wooden_mandroid",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789973754781,
+      "tag": "0003_chemical_multiple_man",
+      "breakpoints": true
     }
   ]
 }

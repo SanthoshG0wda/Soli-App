@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { DocumentManager } from "@/components/documents/document-manager";
+import { requireUser } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "Documents",
-  description: "Upload and manage the documents Soli indexes.",
+  title: "Case files",
+  description: "Upload and manage the matter files Soli indexes.",
 };
 
-export default function DocumentsPage() {
+export default async function DocumentsPage() {
+  await requireUser();
   return (
     <main className="mx-auto flex max-w-4xl flex-1 flex-col px-4 py-8">
       <DocumentManager />

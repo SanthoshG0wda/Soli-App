@@ -63,6 +63,18 @@ const envSchema = z.object({
     .min(0)
     .max(2)
     .default(DEFAULT_RAG_TEMPERATURE),
+  SESSION_SECRET: z
+    .string()
+    .min(32, "SESSION_SECRET must be at least 32 characters long"),
+  SESSION_MAX_AGE_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(7 * 24 * 60 * 60),
+  ADMIN_EMAILS: z
+    .string()
+    .optional()
+    .default(""),
 });
 
 const parsed = envSchema.safeParse(process.env);

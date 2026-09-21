@@ -129,7 +129,7 @@ export function DocumentManager() {
   };
 
   const deleteDocument = async (doc: ManagedDocument) => {
-    if (!confirm(`Delete "${doc.title}" and remove it from the index?`)) return;
+    if (!confirm(`Strike "${doc.title}" from the record and remove it from the index?`)) return;
     const previous = documents;
     setDocuments((docs) => docs.filter((d) => d.id !== doc.id));
     try {
@@ -148,9 +148,11 @@ export function DocumentManager() {
   return (
     <section className="flex flex-1 flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Documents</h1>
+        <h1 className="font-serif text-2xl font-semibold tracking-tight">
+          Case files
+        </h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Upload PDFs to index and query.
+          Upload pleadings, contracts, and exhibits to index and query.
         </p>
       </div>
 
@@ -160,10 +162,12 @@ export function DocumentManager() {
         }`}
       >
         <span className="text-sm font-medium">
-          {uploading ? `Uploading ${uploadName}…` : "Upload a PDF"}
+          {uploading ? `Filing ${uploadName}…` : "File a matter document (PDF)"}
         </span>
         <span className="text-sm text-zinc-500 dark:text-zinc-400">
-          {uploading ? "Extracting, chunking and indexing." : "Click to choose a file."}
+          {uploading
+            ? "Extracting text and preparing citations."
+            : "Click to choose a PDF from the matter file."}
         </span>
         <input
           ref={fileInputRef}
@@ -192,16 +196,16 @@ export function DocumentManager() {
           <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
             <tr>
               <th scope="col" className="px-4 py-3 font-medium">
-                Name
+                File
               </th>
               <th scope="col" className="px-4 py-3 font-medium">
                 Status
               </th>
               <th scope="col" className="px-4 py-3 font-medium">
-                Chunks
+                Passages
               </th>
               <th scope="col" className="px-4 py-3 font-medium">
-                Added
+                Filed
               </th>
               <th scope="col" className="px-4 py-3" />
             </tr>
@@ -213,7 +217,7 @@ export function DocumentManager() {
                   colSpan={5}
                   className="px-4 py-10 text-center text-zinc-500 dark:text-zinc-400"
                 >
-                  Loading documents…
+                  Loading case files…
                 </td>
               </tr>
             ) : documents.length === 0 ? (
@@ -222,7 +226,7 @@ export function DocumentManager() {
                   colSpan={5}
                   className="px-4 py-10 text-center text-zinc-500 dark:text-zinc-400"
                 >
-                  No documents yet
+                  No case files yet
                 </td>
               </tr>
             ) : (

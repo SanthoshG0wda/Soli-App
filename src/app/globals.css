@@ -4,8 +4,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #191919;
-  --foreground: #ececec;
+  --background: #14181f;
+  --foreground: #ece7db;
 }
 
 @theme inline {
@@ -13,15 +13,16 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-fraunces);
 }
 
 @theme {
-  /* Claude-style dark palette */
-  --color-claude-nav: #0f0f0f;
-  --color-claude-bg: #191919;
-  --color-claude-panel: #212121;
-  --color-claude-muted: #262626;
-  --color-claude-accent: #d97757;
+  /* Soli chambers palette: deep ink surfaces, brass accents */
+  --color-soli-nav: #0e1116;
+  --color-soli-bg: #14181f;
+  --color-soli-panel: #1a2029;
+  --color-soli-muted: #242c39;
+  --color-soli-accent: #c9a45c;
 }
 
 body {

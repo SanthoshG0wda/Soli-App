@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { createUIMessageStreamResponse, streamText, type UIMessage } from "ai";
 import { env } from "@/env";
+import { getSessionUser } from "@/lib/auth";
 import { logger } from "@/lib/logger";
-import type { ChatListItem } from "@/lib/chat/types";
 import {
+  chatBelongsToUser,
   ensureChat,
   listChats,
   persistAssistantMessage,
@@ -53,12 +54,20 @@ async function bestEffort(operation: () => Promise<unknown>): Promise<void> {
 
 const model = llmProvider.model();
 
-export async function GET(): Promise<NextResponse<{ chats: ChatListItem[] }>> {
-  const chats = await listChats();
+export async function GET(): Promise<NextResponse> {
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  const chats = await listChats(user.id);
   return NextResponse.json({ chats });
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
   let body: ChatRequestBody;
   try {
     body = (await request.json()) as ChatRequestBody;
@@ -88,6 +97,11 @@ export async function POST(request: Request): Promise<Response> {
         )
       : undefined;
 
+  // Reject forged chat ids before spending on retrieval/streaming.
+  if (body.chatId && !(await chatBelongsToUser(body.chatId, user.id))) {
+    return NextResponse.json({ error: "Chat not found." }, { status: 404 });
+  }
+
   let plan;
   try {
     plan = await planRagChat({ question, documentIds }, chatRagDeps);
@@ -103,7 +117,7 @@ export async function POST(request: Request): Promise<Response> {
 
   let chatId: string;
   try {
-    chatId = await ensureChat(question, body.chatId);
+    chatId = await ensureChat(question, user.id, body.chatId);
   } catch (error) {
     logger.error("failed to create chat", {
       error: error instanceof Error ? error.message : String(error),
@@ -112,7 +126,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   // User message is persisted up front (non-fatal if it fails).
-  await bestEffort(() => persistUserMessage(chatId, question));
+  await bestEffort(() => persistUserMessage(chatId, user.id, question));
 
   // When nothing relevant was retrieved, still answer from general knowledge —
   // the model stream, just without context chunks or source citations.
@@ -139,7 +153,9 @@ export async function POST(request: Request): Promise<Response> {
       chatId,
       plan: proceedPlan,
       onFinished: async (text, sources) => {
-        await bestEffort(() => persistAssistantMessage(chatId, text, sources));
+        await bestEffort(() =>
+          persistAssistantMessage(chatId, user.id, text, sources),
+        );
       },
     }),
   );

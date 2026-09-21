@@ -15,9 +15,9 @@ interface ReadyDocument {
 }
 
 const SUGGESTIONS = [
-  "What is a large language model?",
-  "Summarize the key ideas of the document",
-  "Hello!",
+  "Summarize the key holdings in these filings",
+  "Build a chronology of events from the exhibits",
+  "What limitation periods could apply here?",
 ];
 
 function messageTextText(message: UIMessage): string {
@@ -53,10 +53,10 @@ function formatChatTime(iso: string | null): string {
 }
 
 const THINKING_PHRASES = [
-  "Reviewing the evidence…",
-  "Consulting precedents…",
-  "Examining case law…",
-  "Checking the statutes…",
+  "Reviewing the exhibits…",
+  "Checking the authorities…",
+  "Consulting the record…",
+  "Verifying citations…",
   "Preparing the brief…",
   "Weighing the arguments…",
 ];
@@ -72,11 +72,11 @@ function ThinkingIndicator() {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2 text-sm text-zinc-500">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-claude-accent" />
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-soli-accent" />
         {THINKING_PHRASES[phraseIndex] ?? "Thinking…"}
       </div>
       <p className="text-xs text-zinc-600">
-        Soli can make mistakes, so double-check responses.
+        Soli is a research aid, not legal advice. Verify before you rely.
       </p>
     </div>
   );
@@ -182,6 +182,15 @@ function ExpandIcon() {
 }
 
 const SIDEBAR_COLLAPSED_KEY = "soli:sidebar-collapsed";
+const SIDEBAR_WIDTH_KEY = "soli:sidebar-width";
+const DEFAULT_SIDEBAR_WIDTH = 288;
+const MIN_SIDEBAR_WIDTH = 208;
+const MAX_SIDEBAR_WIDTH = 480;
+
+function clampSidebarWidth(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_SIDEBAR_WIDTH;
+  return Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, value));
+}
 
 function ChatSidebar({
   chats,
@@ -218,6 +227,65 @@ function ChatSidebar({
     };
   }, []);
 
+  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+  const [resizing, setResizing] = useState(false);
+  const resizeStart = useRef<{ x: number; width: number } | null>(null);
+
+  // Load the persisted width after mount (post-hydration) to avoid a
+  // server/client HTML mismatch. Intentional one-time sync setState.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSidebarWidth(
+      clampSidebarWidth(Number(localStorage.getItem(SIDEBAR_WIDTH_KEY))),
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!resizing) return;
+    const onMove = (clientX: number) => {
+      const start = resizeStart.current;
+      if (!start) return;
+      setSidebarWidth(clampSidebarWidth(start.width + (clientX - start.x)));
+    };
+    const onMouseMove = (event: MouseEvent) => onMove(event.clientX);
+    const onTouchMove = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (touch) onMove(touch.clientX);
+    };
+    const onStop = () => {
+      resizeStart.current = null;
+      setResizing(false);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+      setSidebarWidth((current) => {
+        localStorage.setItem(SIDEBAR_WIDTH_KEY, String(current));
+        return current;
+      });
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onStop);
+    window.addEventListener("touchmove", onTouchMove);
+    window.addEventListener("touchend", onStop);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onStop);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onStop);
+    };
+  }, [resizing]);
+
+  const startResize = (clientX: number) => {
+    resizeStart.current = { x: clientX, width: sidebarWidth };
+    setResizing(true);
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+  };
+
+  const resetSidebarWidth = () => {
+    setSidebarWidth(DEFAULT_SIDEBAR_WIDTH);
+    localStorage.setItem(SIDEBAR_WIDTH_KEY, String(DEFAULT_SIDEBAR_WIDTH));
+  };
+
   const handleDeleteClick = (id: string) => {
     if (armTimer.current) clearTimeout(armTimer.current);
     if (armedId === id) {
@@ -237,13 +305,16 @@ function ChatSidebar({
         onClick={onToggle}
         aria-label="Expand sidebar"
         title="Expand sidebar"
-        className="hidden w-1 shrink-0 cursor-pointer flex-col items-stretch border-r border-zinc-800/70 bg-claude-nav transition-colors hover:bg-zinc-700/60 md:flex"
+        className="hidden w-1 shrink-0 cursor-pointer flex-col items-stretch border-r border-zinc-800/70 bg-soli-nav transition-colors hover:bg-zinc-700/60 md:flex"
       />
     );
   }
 
   return (
-    <aside className="hidden w-72 shrink-0 flex-col overflow-hidden border-r border-zinc-800/70 bg-claude-nav transition-[width] duration-200 md:flex">
+    <aside
+      style={{ width: sidebarWidth }}
+      className="relative hidden shrink-0 flex-col overflow-hidden border-r border-zinc-800/70 bg-soli-nav md:flex"
+    >
       <div className="flex items-center gap-2 p-3">
         <button
           type="button"
@@ -252,7 +323,7 @@ function ChatSidebar({
           className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-zinc-700/60 px-3 py-2 text-sm font-medium text-zinc-200 transition-colors hover:bg-zinc-800/50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <PlusIcon />
-          <span className="truncate">New chat</span>
+          <span className="truncate">New consultation</span>
         </button>
         <button
           type="button"
@@ -274,7 +345,7 @@ function ChatSidebar({
           <p className="px-3 py-6 text-sm text-zinc-500">Loading chats…</p>
         ) : chats.length === 0 ? (
           <p className="px-3 py-6 text-sm text-zinc-500">
-            No chats yet. Ask your first question to start one.
+            No matters yet. Open a consultation to begin.
           </p>
         ) : (
           <ul className="flex flex-col gap-0.5">
@@ -328,6 +399,26 @@ function ChatSidebar({
           </ul>
         )}
       </div>
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize sidebar"
+        title="Drag to resize · double-click to reset"
+        onMouseDown={(event) => {
+          event.preventDefault();
+          startResize(event.clientX);
+        }}
+        onTouchStart={(event) => {
+          const touch = event.touches[0];
+          if (touch) startResize(touch.clientX);
+        }}
+        onDoubleClick={resetSidebarWidth}
+        className={`absolute inset-y-0 right-0 z-10 w-2 cursor-col-resize touch-none ${
+          resizing
+            ? "bg-soli-accent/70"
+            : "bg-transparent hover:bg-soli-accent/50"
+        }`}
+      />
     </aside>
   );
 }
@@ -534,7 +625,7 @@ export function ChatPanel() {
             </span>
           ) : (
             <span className="truncate text-sm font-medium text-zinc-300">
-              Chat
+              Consultation
             </span>
           )}
           </div>
@@ -544,14 +635,15 @@ export function ChatPanel() {
           <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6">
             {chat.messages.length === 0 ? (
               <div className="flex flex-col items-center py-16 text-center">
-                <span className="mb-3 text-claude-accent">
+                <span className="mb-3 text-soli-accent">
                   <SparkIcon />
                 </span>
-                <h2 className="text-lg font-medium text-zinc-100">
-                  Hello, I&apos;m Soli
+                <h2 className="font-serif text-xl font-semibold text-zinc-100">
+                  Good day — I&apos;m Soli
                 </h2>
                 <p className="mt-1 max-w-sm text-sm text-zinc-500">
-                  Ask a question about your PDFs, or start with an example.
+                  Your AI paralegal. Ask about your matter files, or start
+                  with an example below.
                 </p>
                 <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
                   {SUGGESTIONS.map((suggestion) => (
@@ -560,7 +652,7 @@ export function ChatPanel() {
                       type="button"
                       onClick={() => sendSuggestion(suggestion)}
                       disabled={streaming}
-                      className="rounded-full border border-zinc-700/70 px-3.5 py-1.5 text-sm text-zinc-300 transition-colors hover:border-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-full border border-zinc-700/70 px-3.5 py-1.5 text-sm text-zinc-300 transition-colors hover:border-soli-accent/60 hover:bg-zinc-800/50 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {suggestion}
                     </button>
@@ -573,7 +665,7 @@ export function ChatPanel() {
                 if (isUser) {
                   return (
                     <div key={message.id ?? index} className="flex justify-end">
-                      <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-claude-muted px-4 py-2.5 text-sm text-zinc-100">
+                      <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-soli-muted px-4 py-2.5 text-sm text-zinc-100">
                         {messageTextText(message)}
                       </div>
                     </div>
@@ -582,7 +674,7 @@ export function ChatPanel() {
                 return (
                   <div key={message.id ?? index}>
                     <div className="mb-1 flex items-center gap-1.5">
-                      <span className="text-claude-accent">
+                      <span className="text-soli-accent">
                         <SparkIcon />
                       </span>
                       <span className="text-xs font-medium text-zinc-400">
@@ -650,7 +742,7 @@ export function ChatPanel() {
                               href={href}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-claude-accent underline"
+                              className="text-soli-accent underline"
                             >
                               {children}
                             </a>
@@ -683,7 +775,7 @@ export function ChatPanel() {
         <div className="px-4 pb-4 md:px-6">
           <div className="mx-auto w-full max-w-2xl">
             <form onSubmit={submit}>
-              <div className="flex flex-col rounded-2xl border border-zinc-700/70 bg-claude-panel shadow-lg shadow-black/30 transition-colors focus-within:border-zinc-500">
+              <div className="flex flex-col rounded-2xl border border-zinc-700/70 bg-soli-panel shadow-lg shadow-black/30 transition-colors focus-within:border-zinc-500">
                 <textarea
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
@@ -696,20 +788,17 @@ export function ChatPanel() {
                     }
                   }}
                   rows={1}
-                  placeholder="Ask about your documents…"
+                  placeholder="Ask about your matter files…"
                   disabled={streaming}
                   className="w-full resize-none bg-transparent px-4 pt-3.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
                 />
-                <div className="flex items-center justify-between px-3 pb-2.5">
-                  <span className="text-[11px] text-zinc-600">
-                    Soli can make mistakes. Ask about your documents.
-                  </span>
+                <div className="flex items-center justify-end px-3 pb-2.5">
                   {streaming ? (
                     <button
                       type="button"
                       onClick={chat.stop}
                       aria-label="Stop generating"
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-claude-accent text-white transition-colors hover:bg-claude-accent/85"
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-soli-accent text-white transition-colors hover:bg-soli-accent/85"
                     >
                       <StopIcon />
                     </button>
