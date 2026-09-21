@@ -55,6 +55,7 @@ export function DocumentManager() {
   const [uploading, setUploading] = useState(false);
   const [uploadName, setUploadName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const listDocuments = useCallback(async () => {
@@ -72,6 +73,14 @@ export function DocumentManager() {
 
   useEffect(() => {
     let cancelled = false;
+    fetch("/api/auth/me")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { user?: { role?: string } } | null) => {
+        if (!cancelled) setIsAdmin(data?.user?.role === "admin");
+      })
+      .catch(() => {
+        // Non-admin by default when the role cannot be determined.
+      });
     fetch("/api/documents")
       .then((response) => {
         if (!response.ok) throw new Error(`Failed to load documents (${response.status})`);
@@ -156,6 +165,7 @@ export function DocumentManager() {
         </p>
       </div>
 
+      {isAdmin && (
       <label
         className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-300 bg-white p-12 text-center transition-colors hover:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-600 ${
           uploading ? "cursor-wait opacity-70" : ""
@@ -181,6 +191,13 @@ export function DocumentManager() {
           }}
         />
       </label>
+      )}
+      {!isAdmin && !loading && (
+        <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+          Filing new documents is restricted to admins. Contact your
+          administrator to add matter files.
+        </p>
+      )}
 
       {error && (
         <p
@@ -266,6 +283,7 @@ export function DocumentManager() {
                     {formatTime(doc.createdAt)}
                   </td>
                   <td className="px-4 py-3 text-right">
+                    {isAdmin && (
                     <button
                       type="button"
                       onClick={() => void deleteDocument(doc)}
@@ -274,6 +292,7 @@ export function DocumentManager() {
                     >
                       Delete
                     </button>
+                    )}
                   </td>
                 </tr>
               ))

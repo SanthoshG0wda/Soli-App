@@ -11,11 +11,13 @@ import {
   signSessionToken,
   verifySessionToken,
 } from "./token";
+import type { UserRole } from "./roles";
 
 export interface SessionUser {
   id: string;
   name: string;
   email: string;
+  role: UserRole;
 }
 
 function cookieOptions(maxAgeSeconds: number) {
@@ -65,7 +67,12 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   if (!claims) return null;
 
   const [row] = await db
-    .select({ id: users.id, name: users.name, email: users.email })
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      role: users.role,
+    })
     .from(users)
     .innerJoin(sessions, eq(sessions.userId, users.id))
     .where(
@@ -77,7 +84,10 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     )
     .limit(1);
 
-  return row ?? null;
+  if (!row) return null;
+  // The check constraint guarantees one of the two values; narrow the type.
+  const role: UserRole = row.role === "admin" ? "admin" : "user";
+  return { id: row.id, name: row.name, email: row.email, role };
 }
 
 /** Use at the top of protected pages; redirects anonymous users to /login. */

@@ -59,6 +59,12 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
+  if (user.role !== "admin") {
+    return NextResponse.json(
+      { error: "Uploading case files is restricted to admins." },
+      { status: 403 },
+    );
+  }
   let form: FormData;
   try {
     form = await request.formData();

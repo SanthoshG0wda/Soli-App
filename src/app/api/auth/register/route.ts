@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { createSession, hashPassword, signupSchema } from "@/lib/auth";
+import {
+  createSession,
+  hashPassword,
+  isAdminEmail,
+  signupSchema,
+} from "@/lib/auth";
 
 interface SignupRequestBody {
   name?: unknown;
@@ -48,10 +53,16 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const passwordHash = await hashPassword(password);
+  const role = isAdminEmail(email) ? "admin" : "user";
   const [user] = await db
     .insert(users)
-    .values({ name, email, passwordHash })
-    .returning({ id: users.id, name: users.name, email: users.email });
+    .values({ name, email, passwordHash, role })
+    .returning({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      role: users.role,
+    });
   if (!user) {
     return NextResponse.json(
       { error: "Failed to create account." },

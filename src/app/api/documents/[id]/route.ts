@@ -15,6 +15,12 @@ export async function DELETE(
   if (!user) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
+  if (user.role !== "admin") {
+    return NextResponse.json(
+      { error: "Deleting case files is restricted to admins." },
+      { status: 403 },
+    );
+  }
 
   // Remove the document (chunks cascade) regardless of vector-store health.
   const [row] = await db
