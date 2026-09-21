@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { ACTIVE_CHAT_KEY } from "@/lib/chat/sources";
@@ -145,21 +147,6 @@ function TrashIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    </svg>
-  );
-}
-
-function XIcon() {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      className="h-3.5 w-3.5"
-      aria-hidden="true"
-    >
-      <path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" />
     </svg>
   );
 }
@@ -551,19 +538,7 @@ export function ChatPanel() {
             </span>
           )}
           </div>
-          <div className="flex items-center gap-0.5">
-            <span className="text-xs text-zinc-600">PDF</span>
-            <button
-              type="button"
-              onClick={() => setDocFilter("")}
-              disabled={!docFilter}
-              aria-label="Clear document scope"
-              className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-700/60 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <XIcon />
-            </button>
-          </div>
-        </header>
+          </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6">
@@ -614,8 +589,76 @@ export function ChatPanel() {
                         Soli
                       </span>
                     </div>
-                    <div className="whitespace-pre-wrap text-[15px] leading-7 text-zinc-200">
-                      {cleanAnswerText(messageTextText(message))}
+                    <div className="markdown-body text-[15px] leading-7 text-zinc-200">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          p: ({ children }) => (
+                            <p className="my-3 first:mt-0 last:mb-0">{children}</p>
+                          ),
+                          ul: ({ children }) => (
+                            <ul className="my-3 list-disc space-y-1 pl-6">
+                              {children}
+                            </ul>
+                          ),
+                          ol: ({ children }) => (
+                            <ol className="my-3 list-decimal space-y-1 pl-6">
+                              {children}
+                            </ol>
+                          ),
+                          li: ({ children }) => <li>{children}</li>,
+                          strong: ({ children }) => (
+                            <strong className="font-semibold text-zinc-100">
+                              {children}
+                            </strong>
+                          ),
+                          em: ({ children }) => (
+                            <em className="italic">{children}</em>
+                          ),
+                          h1: ({ children }) => (
+                            <h1 className="mt-6 mb-3 text-xl font-semibold text-zinc-100 first:mt-0">
+                              {children}
+                            </h1>
+                          ),
+                          h2: ({ children }) => (
+                            <h2 className="mt-6 mb-3 text-lg font-semibold text-zinc-100 first:mt-0">
+                              {children}
+                            </h2>
+                          ),
+                          h3: ({ children }) => (
+                            <h3 className="mt-5 mb-2 text-base font-semibold text-zinc-100 first:mt-0">
+                              {children}
+                            </h3>
+                          ),
+                          code: ({ children }) => (
+                            <code className="rounded bg-zinc-800/80 px-1.5 py-0.5 font-mono text-[13px] text-zinc-100">
+                              {children}
+                            </code>
+                          ),
+                          pre: ({ children }) => (
+                            <pre className="my-3 overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-900/80 p-3 text-[13px] leading-6">
+                              {children}
+                            </pre>
+                          ),
+                          blockquote: ({ children }) => (
+                            <blockquote className="my-3 border-l-2 border-zinc-700 pl-4 text-zinc-400">
+                              {children}
+                            </blockquote>
+                          ),
+                          a: ({ children, href }) => (
+                            <a
+                              href={href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-claude-accent underline"
+                            >
+                              {children}
+                            </a>
+                          ),
+                        }}
+                      >
+                        {cleanAnswerText(messageTextText(message))}
+                      </ReactMarkdown>
                     </div>
                   </div>
                 );
