@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "server-only": ["./server-only-stub"],
+      "@/*": ["../src/*"]
+    }
+  },
+  "include": ["./**/*.ts", "../src/lib/**, ../src/vector-store/**"]
+}
